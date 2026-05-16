@@ -138,7 +138,7 @@ fi
 
 setup_args=(
   setup
-  telegram-starter
+  telegram-voice-starter
   --non-interactive
   --no-autostart
   --no-start-now
