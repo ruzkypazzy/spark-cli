@@ -487,6 +487,17 @@ class SparkCliTests(unittest.TestCase):
         self.assertEqual(modal_args.modal_command, "smoke")
         self.assertIs(modal_args.func, cmd_sandbox)
 
+    def test_sandbox_parser_accepts_railway_doctor_and_login(self) -> None:
+        doctor_args = build_parser().parse_args(["sandbox", "railway", "doctor", "--json"])
+        self.assertEqual(doctor_args.sandbox_backend, "railway")
+        self.assertEqual(doctor_args.railway_command, "doctor")
+        self.assertIs(doctor_args.func, cmd_sandbox)
+
+        login_args = build_parser().parse_args(["sandbox", "railway", "login", "--json"])
+        self.assertEqual(login_args.sandbox_backend, "railway")
+        self.assertEqual(login_args.railway_command, "login")
+        self.assertIs(login_args.func, cmd_sandbox)
+
     def test_modal_doctor_cli_json_runs_payload(self) -> None:
         args = build_parser().parse_args(["sandbox", "modal", "doctor", "--json"])
         stdout = StringIO()

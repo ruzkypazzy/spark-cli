@@ -8153,6 +8153,52 @@ def cmd_sandbox(args: argparse.Namespace) -> int:
             print(payload["next"])
         return exit_code
 
+    if backend == "railway" and command in {"doctor", "login"}:
+        from .sandbox.railway import collect_railway_doctor_payload, collect_railway_login_payload, railway_doctor_capabilities
+        try:
+            if command == "doctor":
+                payload = collect_railway_doctor_payload()
+            else:
+                payload = collect_railway_login_payload()
+            exit_code = 0 if payload.get("ok") else 1
+        except ValueError as error:
+            payload = {
+                "ok": False,
+                "backend": "railway",
+                "command": command,
+                "error": str(error),
+                "capabilities": railway_doctor_capabilities().to_dict(),
+            }
+            exit_code = 1
+        if getattr(args, "json", False):
+            print(json.dumps(payload, indent=2))
+        else:
+            if command == "doctor" and "checks" in payload:
+                status = "OK" if payload.get("ok") else "needs attention"
+                print(f"Spark Railway sandbox doctor: {status}")
+                for check in payload.get("checks", []):
+                    marker = "OK" if check.get("ok") else "WARN" if check.get("level") == "warning" else "FAIL"
+                    print(f"  [{marker}] {check['name']}: {check['detail']}")
+                    if check.get("repair") and not check.get("ok"):
+                        print(f"        Repair: {check['repair']}")
+                print(payload["next"])
+            elif command == "login":
+                if payload.get("skipped"):
+                    print("Railway login: skipped (RAILWAY_TOKEN already set)")
+                elif payload.get("ok"):
+                    print("Railway login: OK")
+                else:
+                    print("Railway login: failed")
+                    probe = payload.get("probe") or {}
+                    print(str(probe.get("detail") or payload.get("error") or "Login failed."))
+                print(payload["next"])
+            elif payload.get("ok"):
+                print(f"Spark Railway sandbox {command}: OK")
+            else:
+                print(f"Spark Railway sandbox {command}: failed")
+                print(payload.get("error") or "")
+        return exit_code
+
     manifest = CapabilityManifest(backend=backend)
     payload = {
         "ok": False,
@@ -13614,6 +13660,15 @@ def build_parser() -> argparse.ArgumentParser:
     sandbox_modal_smoke_parser = sandbox_modal_subparsers.add_parser("smoke", help="Run Modal no-secret smoke")
     sandbox_modal_smoke_parser.add_argument("--json", action="store_true")
     sandbox_modal_smoke_parser.set_defaults(func=cmd_sandbox)
+
+    sandbox_railway_parser = sandbox_subparsers.add_parser("railway", help="Manage Railway hosted sandbox login and readiness")
+    sandbox_railway_subparsers = sandbox_railway_parser.add_subparsers(dest="railway_command", required=True)
+    sandbox_railway_doctor_parser = sandbox_railway_subparsers.add_parser("doctor", help="Check Railway CLI and auth readiness")
+    sandbox_railway_doctor_parser.add_argument("--json", action="store_true")
+    sandbox_railway_doctor_parser.set_defaults(func=cmd_sandbox)
+    sandbox_railway_login_parser = sandbox_railway_subparsers.add_parser("login", help="Log in to Railway (opens browser or uses RAILWAY_TOKEN)")
+    sandbox_railway_login_parser.add_argument("--json", action="store_true")
+    sandbox_railway_login_parser.set_defaults(func=cmd_sandbox)
 
     approval_parser = subparsers.add_parser("approval", help="Classify sensitive Spark actions before enforcement")
     approval_subparsers = approval_parser.add_subparsers(dest="approval_command", required=True)

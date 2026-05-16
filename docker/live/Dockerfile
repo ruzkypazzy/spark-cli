@@ -9,6 +9,7 @@ RUN apt-get update \
         ca-certificates \
         git \
         gosu \
+        lsof \
         python3 \
         python3-venv \
     && rm -rf /var/lib/apt/lists/* \
