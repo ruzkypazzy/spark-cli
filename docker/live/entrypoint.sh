@@ -146,7 +146,7 @@ setup_args=(
   --llm-provider
   "$provider"
   --spawner-ui-url
-  "http://127.0.0.1:${SPARK_SPAWNER_PORT}"
+  "${SPARK_SPAWNER_UI_URL:-http://127.0.0.1:${SPARK_SPAWNER_PORT}}"
 )
 
 if [ "$telegram_mode" = "external" ]; then
